@@ -28,3 +28,41 @@ class Player():
             else:
                 index = self.choose_pawn_delegate(pawns)
         return index
+
+class Board():
+    BOARD_SIZE = 56
+    BOARD_COLOUR_SIZE = 7
+    COLOUR_ORDER = ['yellow', 'blue', 'red', 'green']
+    COLOUR_DISTANCE = 14
+
+    def __init__(self):
+        Board.COLOUR_START = {
+            colour: 1 + index * Board.COLOUR_DISTANCE for
+            index, colour in enumerate(Board.COLOUR_ORDER)}
+        Board.COLOUR_END = {
+            colour: index * Board.COLOUR_DISTANCE
+            for index, colour in enumerate(Board.COLOUR_ORDER)}
+        Board.COLOUR_END['yellow'] = Board.BOARD_SIZE
+        self.pawns_possiotion = {}
+        self.painter = PaintBoard()
+        self.board_pool_position = (0, 0)
+
+    def set_pawn(self, pawn, position):
+        self.pawns_possiotion[pawn] = position
+
+    def put_pawn_on_board_pool(self, pawn):
+        self.set_pawn(pawn, self.board_pool_position)
+
+    def is_pawn_on_board_pool(self, pawn):
+        return self.pawns_possiotion[pawn] == self.board_pool_position
+
+    def put_pawn_on_starting_square(self, pawn):
+        start = Board.COLOUR_START[pawn.colour.lower()]
+        position = (start, 0)
+        self.set_pawn(pawn, position)
+
+    def can_pawn_move(self, pawn, rolled_value):
+        common_poss, private_poss = self.pawns_possiotion[pawn]
+        if private_poss + rolled_value > self.BOARD_COLOUR_SIZE:
+            return False
+        return True
