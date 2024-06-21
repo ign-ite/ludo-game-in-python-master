@@ -66,3 +66,72 @@ class Board():
         if private_poss + rolled_value > self.BOARD_COLOUR_SIZE:
             return False
         return True
+
+    def move_pawn(self, pawn, rolled_value):
+        common_poss, private_poss = self.pawns_possiotion[pawn]
+        end = self.COLOUR_END[pawn.colour.lower()]
+        if private_poss > 0:
+            private_poss += rolled_value
+        elif common_poss <= end and common_poss + rolled_value > end:
+            # pawn is entering in own squares
+            private_poss += rolled_value - (end - common_poss)
+            common_poss = end
+        else:
+            # pawn will be still in common square
+            common_poss += rolled_value
+            if common_poss > self.BOARD_SIZE:
+                common_poss = common_poss - self.BOARD_SIZE
+        position = common_poss, private_poss
+        self.set_pawn(pawn, position)
+
+        def does_pawn_reach_end(self, pawn):
+            common_poss, private_poss = self.pawns_possiotion[pawn]
+            if private_poss == self.BOARD_COLOUR_SIZE:
+                return True
+            return False
+
+        def get_pawns_on_same_postion(self, pawn):
+            position = self.pawns_possiotion[pawn]
+            return [curr_pawn for curr_pawn, curr_postion in
+                    self.pawns_possiotion.items()
+                    if position == curr_postion]
+
+        def paint_board(self):
+            positions = {}
+            for pawn, position in self.pawns_possiotion.items():
+                common, private = position
+                if not private == Board.BOARD_COLOUR_SIZE:
+                    positions.setdefault(position, []).append(pawn)
+            return self.painter.paint(positions)
+
+    class Die():
+        MIN = 1
+        MAX = 6
+
+        @staticmethod
+        def throw():
+            return random.randint(Die.MIN, Die.MAX)
+
+    class Game():
+        def __init__(self):
+            self.players = deque()
+            self.standing = []
+            self.board = Board()
+            self.finished = False
+            self.rolled_value = None
+            self.curr_player = None
+            self.allowed_pawns = []
+            self.picked_pawn = None
+            self.index = None
+            self.jog_pawns = []
+
+        def add_palyer(self, player):
+            self.players.append(player)
+            for pawn in player.pawns:
+                self.board.put_pawn_on_board_pool(pawn)
+
+        def get_available_colours(self):
+            used = [player.colour for player in self.players]
+            available = set(self.board.COLOUR_ORDER) - set(used)
+            return sorted(available)
+
