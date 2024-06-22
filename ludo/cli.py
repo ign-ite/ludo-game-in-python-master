@@ -99,3 +99,73 @@ class CLIGame():
             colour = available_colours.pop()
             player = Player(colour)
         self.game.add_palyer(player)
+
+    def prompt_for_players(self):
+        counts = ("first", "second", "third", "fourth last")
+        text_add = "Add {} player"
+        for i in range(2):
+            print(text_add.format(counts[i]))
+            self.prompt_for_player()
+            print("Player added")
+
+        text = linesep.join(["Choose option:",
+                             "0 - add player",
+                             "1 - start game with {} players"])
+        for i in range(2, 4):
+            choice = self.validate_input(text.format(str(i)), int, (0, 1))
+            if choice == 1:
+                break
+            elif choice == 0:
+                print(text_add.format(counts[i]))
+                self.prompt_for_player()
+                print("Player added")
+
+    def prompt_choose_pawn(self):
+        text = present_6_die_name(self.game.rolled_value,
+                                  str(self.game.curr_player))
+        text += linesep + "has more than one possible pawns to move."
+        text += " Choose pawn" + linesep
+        pawn_options = ["{} - {}".format(index + 1, pawn.id)
+                        for index, pawn
+                        in enumerate(self.game.allowed_pawns)]
+        text += linesep.join(pawn_options)
+        index = self.validate_input(
+            text, int, range(1, len(self.game.allowed_pawns) + 1))
+        self.prompted_for_pawn = True
+        return index - 1
+
+    def prompt_to_continue(self):
+        text = "press Enter to continue" + linesep
+        input(text)
+
+    def print_players_info(self):
+        word = "start" if self.game.rolled_value is None else "continue"
+        print("Game {} with {} players:".format(
+            word,
+            len(self.game.players)))
+        for player in self.game.players:
+            print(player)
+        print()
+
+    def print_info_after_turn(self):
+        pawns_id = [pawn.id for pawn in self.game.allowed_pawns]
+        # nicer print of dice
+        message = present_6_die_name(self.game.rolled_value,
+                                     str(self.game.curr_player))
+        message += linesep
+        if self.game.allowed_pawns:
+            message_moved = "{} is moved. ".format(
+                self.game.picked_pawn.id)
+            if self.prompted_for_pawn:
+                self.prompted_for_pawn = False
+                print(message_moved)
+                return
+            message += "{} possible pawns to move.".format(
+                " ".join(pawns_id))
+            message += " " + message_moved
+            if self.game.jog_pawns:
+                message += "Jog pawn "
+                message += " ".join([pawn.id for pawn in self.game.jog_pawns])
+        else:
+            message += "No possible pawns to move."
+        print(message)
