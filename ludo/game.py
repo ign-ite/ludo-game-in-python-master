@@ -1,6 +1,6 @@
 from collections import namedtuple, deque
 import random
-from painter import PaintBoard
+from .painter import PaintBoard
 
 Pawn = namedtuple("Pawn", "index colour id")
 

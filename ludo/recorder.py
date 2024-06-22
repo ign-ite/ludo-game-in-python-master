@@ -1,5 +1,5 @@
 import pickle
-from game import Player
+from .game import Player
 
 
 class RunRecord():

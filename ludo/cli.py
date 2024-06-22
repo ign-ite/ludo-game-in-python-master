@@ -1,6 +1,6 @@
-from game import Player, Game
-from painter import present_6_die_name
-from recorder import RunRecord, MakeRecord
+from .game import Player, Game
+from .painter import present_6_die_name
+from .recorder import RunRecord, MakeRecord
 from os import linesep
 
 
