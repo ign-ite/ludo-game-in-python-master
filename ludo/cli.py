@@ -1,6 +1,6 @@
-from .game import Player, Game
-from .painter import present_6_die_name
-from .recorder import RunRecord, MakeRecord
+from game import Player, Game
+from painter import present_6_die_name
+from recorder import RunRecord, MakeRecord
 from os import linesep
 
 
@@ -169,3 +169,93 @@ class CLIGame():
         else:
             message += "No possible pawns to move."
         print(message)
+    def print_standing(self):
+        standing_list = ["{} - {}".format(index + 1, player)
+                         for index, player in enumerate(self.game.standing)]
+        message = "Standing:" + linesep + linesep.join(standing_list)
+        print(message)
+    def print_board(self):
+        print(self.game.get_board_pic())
+    def run_recorded_game(self):
+        self.load_recorded_players()
+        self.print_players_info()
+        self.prompt_to_continue()
+        for rolled_value, index in self.record_runner:
+            self.game.play_turn(index, rolled_value)
+            self.print_info_after_turn()
+            self.print_board()
+            self.prompt_to_continue()
+            self.print_board()
+    def continue_recorded_game(self):
+        self.load_recorded_players()
+        self.record_players()
+        for rolled_value, index in self.record_runner:
+            self.game.play_turn(index, rolled_value)
+            self.record_maker.add_game_turn(
+                self.game.rolled_value, self.game.index)
+        self.print_players_info()
+        self.print_info_after_turn()
+        self.print_board()
+    def record_players(self):
+        for player in self.game.players:
+            self.record_maker.add_player(player)
+    def load_recorded_players(self):
+        if self.record_runner is None:
+            file_descr = self.prompt_for_file()
+            self.record_runner = RunRecord(file_descr)
+            file_descr.close()
+        for player in self.record_runner.get_players(
+                self.prompt_choose_pawn):
+            self.game.add_palyer(player)
+    def load_players_for_new_game(self):
+        self.prompt_for_players()
+        self.print_players_info()
+        self.record_players()
+    def play_game(self):
+        try:
+            while not self.game.finished:
+                self.game.play_turn()
+                self.print_info_after_turn()
+                self.print_board()
+                self.record_maker.add_game_turn(
+                    self.game.rolled_value, self.game.index)
+                self.prompt_to_continue()
+            print("Game finished")
+            self.print_standing()
+            self.offer_save_game()
+        except (KeyboardInterrupt, EOFError):
+            print(linesep +
+                  "Exiting game. " +
+                  "Save game and continue same game later?")
+            self.offer_save_game()
+            raise
+    def offer_save_game(self):
+        if self.does_user_want_save_game():
+            file_descr = self.prompt_for_file(mode="wb")
+            self.record_maker.save(file_descr)
+            file_descr.close()
+            print("Game is saved")
+    def start(self):
+        print()
+        try:
+            choice = self.get_user_initial_choice()
+            if choice == 0:  # start new game
+                self.load_players_for_new_game()
+                self.play_game()
+            elif choice == 1:  # continue game
+                self.continue_recorded_game()
+                if self.game.finished:
+                    print("Could not continue.",
+                          "Game is already finished",
+                          linesep + "Exit")
+                else:
+                    self.prompt_to_continue()
+                    self.play_game()
+            elif choice == 2:  # review played game
+                self.run_recorded_game()
+        except (KeyboardInterrupt, EOFError):
+            print(linesep + "Exit Game")
+
+
+if __name__ == '__main__':
+    CLIGame().start()
