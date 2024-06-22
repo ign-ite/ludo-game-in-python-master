@@ -2,7 +2,6 @@ from collections import namedtuple, deque
 import random
 from .painter import PaintBoard
 
-
 Pawn = namedtuple("Pawn", "index colour id")
 
 
@@ -28,6 +27,7 @@ class Player():
             else:
                 index = self.choose_pawn_delegate(pawns)
         return index
+
 
 class Board():
     BOARD_SIZE = 56
@@ -104,34 +104,102 @@ class Board():
                     positions.setdefault(position, []).append(pawn)
             return self.painter.paint(positions)
 
-    class Die():
-        MIN = 1
-        MAX = 6
 
-        @staticmethod
-        def throw():
-            return random.randint(Die.MIN, Die.MAX)
+class Die():
+    MIN = 1
+    MAX = 6
 
-    class Game():
-        def __init__(self):
-            self.players = deque()
-            self.standing = []
-            self.board = Board()
-            self.finished = False
-            self.rolled_value = None
-            self.curr_player = None
-            self.allowed_pawns = []
+
+@staticmethod
+def throw():
+    return random.randint(Die.MIN, Die.MAX)
+
+
+class Game():
+    def __init__(self):
+        self.players = deque()
+        self.standing = []
+        self.board = Board()
+        self.finished = False
+        self.rolled_value = None
+        self.curr_player = None
+        self.allowed_pawns = []
+        self.picked_pawn = None
+        self.index = None
+        self.jog_pawns = []
+
+    def add_palyer(self, player):
+        self.players.append(player)
+        for pawn in player.pawns:
+            self.board.put_pawn_on_board_pool(pawn)
+
+    def get_available_colours(self):
+        used = [player.colour for player in self.players]
+        available = set(self.board.COLOUR_ORDER) - set(used)
+        return sorted(available)
+
+    def _get_next_turn(self):
+        if not self.rolled_value == Die.MAX:
+            self.players.rotate(-1)
+        return self.players[0]
+
+    def get_allowed_pawns_to_move(self, player, rolled_value):
+        allowed_pawns = []
+        if rolled_value == Die.MAX:
+            pawn = self.get_pawn_from_board_pool(player)
+            if pawn:
+                allowed_pawns.append(pawn)
+        for pawn in player.pawns:
+            if not self.board.is_pawn_on_board_pool(pawn) and \
+                    self.board.can_pawn_move(pawn, rolled_value):
+                allowed_pawns.append(pawn)
+        return sorted(allowed_pawns, key=lambda pawn: pawn.index)
+
+    def get_board_pic(self):
+        return self.board.paint_board()
+
+    def _jog_foreign_pawn(self, pawn):
+        pawns = self.board.get_pawns_on_same_postion(pawn)
+        for p in pawns:
+            if p.colour != pawn.colour:
+                self.board.put_pawn_on_board_pool(p)
+                self.jog_pawns.append(p)
+
+    def _make_move(self, player, pawn):
+        if self.rolled_value == Die.MAX and \
+                self.board.is_pawn_on_board_pool(pawn):
+            self.board.put_pawn_on_starting_square(pawn)
+            self._jog_foreign_pawn(pawn)
+            return
+        self.board.move_pawn(pawn, self.rolled_value)
+        if self.board.does_pawn_reach_end(pawn):
+            player.pawns.remove(pawn)
+            if not player.pawns:
+                self.standing.append(player)
+                self.players.remove(player)
+                if len(self.players) == 1:
+                    self.standing.extend(self.players)
+                    self.finished = True
+        else:
+            self._jog_foreign_pawn(pawn)
+
+    def play_turn(self, ind=None, rolled_val=None):
+        self.jog_pawns = []
+        self.curr_player = self._get_next_turn()
+        if rolled_val is None:
+            self.rolled_value = Die.throw()
+        else:
+            self.rolled_value = rolled_val
+        self.allowed_pawns = self.get_allowed_pawns_to_move(
+            self.curr_player, self.rolled_value)
+        if self.allowed_pawns:
+            if ind is None:
+                self.index = self.curr_player.choose_pawn(
+                    self.allowed_pawns)
+            else:
+                self.index = ind
+            self.picked_pawn = self.allowed_pawns[self.index]
+            self._make_move(self.curr_player, self.picked_pawn)
+        else:
+            self.index = -1
             self.picked_pawn = None
-            self.index = None
-            self.jog_pawns = []
-
-        def add_palyer(self, player):
-            self.players.append(player)
-            for pawn in player.pawns:
-                self.board.put_pawn_on_board_pool(pawn)
-
-        def get_available_colours(self):
-            used = [player.colour for player in self.players]
-            available = set(self.board.COLOUR_ORDER) - set(used)
-            return sorted(available)
-
